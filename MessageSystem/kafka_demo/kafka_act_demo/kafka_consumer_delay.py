@@ -13,6 +13,8 @@ from time import sleep
 import threading
 import os
 import sys
+import time
+import json
 
 def get_time_now():
     time_now = datetime.now()
@@ -39,17 +41,18 @@ def time_diff_msec(now_time,last_time):
 
 # init consumer
 bootstrap_servers = ["localhost:9092"]
-consumer = KafkaConsumer(bootstrap_servers = bootstrap_servers,auto_offset_reset = 'latest', group_id = "act11")
+consumer = KafkaConsumer(bootstrap_servers = bootstrap_servers,
+                    auto_offset_reset = 'latest', group_id = "act11", )
 
 # subscribe
-topic_example = 'test200'
+topic_example = 'flink-test'
 topics=[topic_example]
 #consumer.subscribe(topics)
 
 # seek
 partition = TopicPartition(topic_example, 0)
 consumer.assign([partition])
-consumer.seek(partition, 50)
+consumer.seek(partition, 0)
 
 # read schema
 schema_path = "./hq_sample.avrc"
@@ -58,29 +61,27 @@ signal_schema = schema.Parse(open(schema_path).read())
 def run1(rounds):
     time_delay_avg = 0
     count = 0
-    global time_now
     # only receive rounds number of record
     while count < rounds:
-        msg = consumer.poll(timeout_ms = 2)
-        if msg=={}:
-            continue
-        part_list = list(msg.keys())
-        for record_ori in msg[part_list[0]]:
-            if count >= rounds:
-                break
-            bytes_reader = io.BytesIO(record_ori.value)
-            decoder = avroIO.BinaryDecoder(bytes_reader)
-            reader = avroIO.DatumReader(signal_schema)
-            record = reader.read(decoder)
-            time_now = get_time_now()
-            time_diff = time_diff_msec(time_now,record['LocalTimeStamp'])
-
-            # only consider delay < 1000ms as valid delay
-            if time_diff < 1000:
-                count += 1
-                time_delay_avg += time_diff
-            print("offset["+ str(record_ori.offset) +"] count["+str(count)+"] now["+str(time_now)+"] get["+str(record['LocalTimeStamp'])+"] diff["+str(time_diff)+"]")
-    print(time_delay_avg/rounds)
+        for msg in consumer:
+            #print(msg)
+            record = json.loads(msg.value.decode('utf-8'))
+            count += 1
+            print("offset["+ str(msg.offset) +"] count["+str(count)+"] + price["+str(record['Price'])+ ']')
+        # msg = consumer.poll(timeout_ms = 2)
+        # if msg=={}:
+        #     continue
+        # part_list = list(msg.keys())
+        # for record_ori in msg[part_list[0]]:
+        #     print(record_ori)
+        #     if count >= rounds:
+        #         break
+            #print(record_ori.value)
+            #print(type(record_ori.value))
+            #record = str(record_ori.value, encoding='utf-16')
+            #print(record)
+            #print(type(record))
+        
 
 # quit after 100 records
 run1(1000)

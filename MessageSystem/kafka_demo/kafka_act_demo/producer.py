@@ -3,6 +3,7 @@
 import os
 from io import BytesIO
 from kafka.admin import KafkaAdminClient,NewTopic
+import random
 
 import json
 import avro.schema
@@ -77,13 +78,13 @@ def time_stick():
 
 
 if __name__ == '__main__':
-    topic = 'test200'
+    topic = 'flink-test'
     brokers = "localhost:9092"
     admin_client = KafkaAdminClient(bootstrap_servers=brokers, client_id='test')
-    topic_list = [(NewTopic(name=topic, num_partitions=3, replication_factor=1))]
+    topic_list = [(NewTopic(name=topic, num_partitions=1, replication_factor=1))]
     try:
         pass
-        #admin_client.create_topics(new_topics=topic_list, validate_only=False)
+        admin_client.create_topics(new_topics=topic_list, validate_only=False)
     except Exception as e:
         print(e)
 
@@ -94,12 +95,20 @@ if __name__ == '__main__':
     bina_data = avroUtil.avro_encode(ori_data)
     print(bina_data)
     """
-    producer = KafkaProducer(bootstrap_servers=brokers)
+    producer = KafkaProducer(bootstrap_servers=brokers, value_serializer= str.encode)
     count = 0
-    while count < 300:
-        ori_data = {'LocalTimeStamp':time_stick(),'Time':time_stick(),'Symbol':'lfj1314','ClosePrice':count}
-        bina_data = avroUtil.avro_encode(ori_data)
-        print("count: "+str(count)+" "+str(ori_data))
+    saler = ['saler1', 'saler2']
+    while count < 10000:
+        #ori_data = {'LocalTimeStamp':time_stick(),'Time':time_stick(),'Symbol':'lfj1314','ClosePrice':count}
+        ori_data = {'Goods':saler[random.randint(0, 1)], 'Price':random.randint(1, 1000)}
+        bina_data = json.dumps(ori_data)
+        #print(type(bina_data))
+        #print(bina_data)
+        #final_data = bytes(bina_data, encoding='utf-8')
+        #print(final_data)
+        #print(type(bina_data))
+        #print(str(ori_data))
+        # print(bina_data)
         producer.send(topic, bina_data)
         count += 1
         sleep(0.01)

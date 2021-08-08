@@ -1,5 +1,5 @@
 # install python3 kafka
-python3 -m pip install avro-python3
+# python3 -m pip install avro-python3
 python3 -m pip install kafka-python
 
 # run docker container
